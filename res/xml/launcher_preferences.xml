@@ -16,7 +16,8 @@
 
 <androidx.preference.PreferenceScreen
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:launcher="http://schemas.android.com/apk/res-auto">
+    xmlns:launcher="http://schemas.android.com/apk/res-auto"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <SwitchPreferenceCompat
         android:defaultValue="false"
@@ -58,6 +59,17 @@
         android:summary="@string/pref_show_hotseat_qsb_summary"
         android:defaultValue="false"
         android:persistent="true" />
+
+    <androidx.preference.SeekBarPreference
+        android:key="pref_transition_animation_scale"
+        android:title="@string/pref_transition_animation_scale_title"
+        android:summary="@string/pref_transition_animation_scale_summary"
+        android:persistent="false"
+        app:min="0"
+        android:max="30"
+        app:seekBarIncrement="1"
+        app:showSeekBarValue="false"
+        app:updatesContinuously="true" />
 
     <SwitchPreferenceCompat
         android:key="pref_recents_clear_all_at_bottom"

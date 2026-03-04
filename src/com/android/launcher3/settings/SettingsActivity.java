@@ -26,10 +26,12 @@ import static com.android.launcher3.InvariantDeviceProfile.TYPE_MULTI_DISPLAY;
 import static com.android.launcher3.InvariantDeviceProfile.TYPE_TABLET;
 import static com.android.launcher3.util.Executors.MAIN_EXECUTOR;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.LauncherApps;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
@@ -52,6 +54,7 @@ import androidx.preference.PreferenceFragmentCompat.OnPreferenceStartScreenCallb
 import androidx.preference.PreferenceGroup;
 import androidx.preference.PreferenceGroup.PreferencePositionCallback;
 import androidx.preference.PreferenceScreen;
+import androidx.preference.SeekBarPreference;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.launcher3.BuildConfig;
@@ -99,6 +102,7 @@ public class SettingsActivity extends FragmentActivity
 
     private static final String KEY_SUGGESTIONS = "pref_suggestions";
     private static final String SUGGESTIONS_PACKAGE = "com.google.android.as";
+    private static final String KEY_TRANSITION_ANIMATION_SCALE = "pref_transition_animation_scale";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -197,6 +201,9 @@ public class SettingsActivity extends FragmentActivity
      * This fragment shows the launcher preferences.
      */
     public static class LauncherSettingsFragment extends SettingsBasePreferenceFragment {
+        private static final int TRANSITION_SCALE_MIN_PROGRESS = 0;
+        private static final int TRANSITION_SCALE_MAX_PROGRESS = 30;
+        private static final float TRANSITION_SCALE_STEP = 0.1f;
 
         private @Nullable SafeCloseable mSettingCacheSafeCloseable;
 
@@ -380,8 +387,81 @@ public class SettingsActivity extends FragmentActivity
                 case SHOW_HOTSEAT_QSB_KEY:
                     return launcherApps != null &&
                             launcherApps.isPackageEnabled(SEARCH_PACKAGE, myUserHandle());
+                case KEY_TRANSITION_ANIMATION_SCALE:
+                    if (!hasWriteSecureSettingsPermission()) {
+                        return false;
+                    }
+                    return initTransitionAnimationScalePreference((SeekBarPreference) preference);
             }
             return true;
+        }
+
+        private boolean hasWriteSecureSettingsPermission() {
+            return getContext().checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
+                    == PackageManager.PERMISSION_GRANTED;
+        }
+
+        private boolean initTransitionAnimationScalePreference(SeekBarPreference preference) {
+            preference.setMin(TRANSITION_SCALE_MIN_PROGRESS);
+            preference.setMax(TRANSITION_SCALE_MAX_PROGRESS);
+
+            float defaultScale = getTransitionAnimationScaleDefaultValue();
+            float currentScale = Settings.Global.getFloat(getContext().getContentResolver(),
+                    Settings.Global.TRANSITION_ANIMATION_SCALE, defaultScale);
+
+            int currentProgress = scaleToProgress(currentScale);
+            preference.setValue(currentProgress);
+            updateTransitionAnimationScaleSummary(preference, progressToScale(currentProgress));
+
+            preference.setOnPreferenceChangeListener((pref, newValue) -> {
+                int progress = (Integer) newValue;
+                float scale = progressToScale(progress);
+                try {
+                    if (!Settings.Global.putFloat(getContext().getContentResolver(),
+                            Settings.Global.TRANSITION_ANIMATION_SCALE, scale)) {
+                        return false;
+                    }
+                } catch (SecurityException e) {
+                    return false;
+                }
+                updateTransitionAnimationScaleSummary(preference, scale);
+                return true;
+            });
+            return true;
+        }
+
+        private float getTransitionAnimationScaleDefaultValue() {
+            int resId = Resources.getSystem().getIdentifier(
+                    "config_appTransitionAnimationDurationScaleDefault", "dimen", "android");
+            if (resId == 0) {
+                return 1.0f;
+            }
+            try {
+                return Resources.getSystem().getFloat(resId);
+            } catch (Resources.NotFoundException e) {
+                return 1.0f;
+            }
+        }
+
+        private int scaleToProgress(float scale) {
+            int progress = Math.round(scale / TRANSITION_SCALE_STEP);
+            if (progress < TRANSITION_SCALE_MIN_PROGRESS) {
+                return TRANSITION_SCALE_MIN_PROGRESS;
+            }
+            if (progress > TRANSITION_SCALE_MAX_PROGRESS) {
+                return TRANSITION_SCALE_MAX_PROGRESS;
+            }
+            return progress;
+        }
+
+        private float progressToScale(int progress) {
+            return progress * TRANSITION_SCALE_STEP;
+        }
+
+        private void updateTransitionAnimationScaleSummary(
+                SeekBarPreference preference, float scale) {
+            preference.setSummary(
+                    getString(R.string.pref_transition_animation_scale_value, scale));
         }
 
         @Override
