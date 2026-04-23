@@ -34,6 +34,7 @@ import androidx.annotation.Nullable;
 
 import com.android.launcher3.DeviceProfile;
 import com.android.launcher3.Insettable;
+import com.android.launcher3.LauncherPrefs;
 import com.android.launcher3.R;
 import com.android.launcher3.anim.AnimatedFloat;
 import com.android.launcher3.display.DisplayController;
@@ -145,6 +146,8 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
     /** Container for the action buttons below a focused, non-split Overview tile. */
     protected LinearLayout mActionButtons;
     private Button mSplitButton;
+    private Button mClearAllButton;
+    private Button mScreenshotButton;
     /**
      * The "save app pair" button. Currently this is the only button that is not contained in
      * mActionButtons, since it is the sole button that appears for a grouped task.
@@ -209,11 +212,23 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
         // The screenshot button is implemented as a Button in launcher3 and NexusLauncher, but is
         // an ImageButton in go launcher (does not share a common class with Button). Take care when
         // casting this.
-        View screenshotButton = findViewById(R.id.action_screenshot);
-        screenshotButton.setOnClickListener(this);
+        mScreenshotButton = findViewById(R.id.action_screenshot);
+        mScreenshotButton.setOnClickListener(this);
+        mClearAllButton = findViewById(R.id.action_clear_all);
+        mClearAllButton.setOnClickListener(this);
         mSplitButton = findViewById(R.id.action_split);
         mSplitButton.setOnClickListener(this);
         mSaveAppPairButton.setOnClickListener(this);
+
+        updateClearAllVisibility();
+    }
+
+    private void updateClearAllVisibility() {
+        if (mScreenshotButton == null || mClearAllButton == null) return;
+        boolean clearAllAtBottom = LauncherPrefs.get(getContext())
+                .get(LauncherPrefs.RECENTS_CLEAR_ALL_AT_BOTTOM);
+        mScreenshotButton.setVisibility(clearAllAtBottom ? GONE : VISIBLE);
+        mClearAllButton.setVisibility(clearAllAtBottom ? VISIBLE : GONE);
     }
 
     /**
@@ -233,6 +248,8 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
         int id = view.getId();
         if (id == R.id.action_screenshot) {
             mCallbacks.onScreenshot();
+        } else if (id == R.id.action_clear_all) {
+            mCallbacks.onClearAll();
         } else if (id == R.id.action_split) {
             mCallbacks.onSplit();
         } else if (id == R.id.action_save_app_pair) {
@@ -320,6 +337,8 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
                 + showSingleTaskActions + "], showGroupActions = [" + showGroupActions + "]");
         getActionsAlphas().get(INDEX_GROUPED_ALPHA).setValue(showSingleTaskActions ? 1 : 0);
         getGroupActionsAlphas().get(INDEX_GROUPED_ALPHA).setValue(showGroupActions ? 1 : 0);
+
+        updateClearAllVisibility();
     }
 
     /**
@@ -452,5 +471,7 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
                 : R.drawable.ic_save_app_pair_up_down;
         mSaveAppPairButton.setCompoundDrawablesRelativeWithIntrinsicBounds(
                 appPairIconRes, 0, 0, 0);
+
+        updateClearAllVisibility();
     }
 }

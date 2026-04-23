@@ -393,6 +393,13 @@ public class TaskOverlayFactory {
                 endLiveTileMode(() -> saveScreenshot(mTask));
             }
 
+            public void onClearAll() {
+                RecentsView recentsView = mTaskContainer.getTaskView().getRecentsView();
+                if (recentsView != null) {
+                    recentsView.dismissAllTasks(null);
+                }
+            }
+
             public void onSplit() {
                 endLiveTileMode(TaskOverlay.this::enterSplitSelect);
             }
@@ -410,6 +417,9 @@ public class TaskOverlayFactory {
     public interface OverlayUICallbacks {
         /** User has indicated they want to screenshot the current task. */
         void onScreenshot();
+
+        /** User wants to clear all tasks. */
+        void onClearAll();
 
         /** User wants to start split screen with current app. */
         void onSplit();

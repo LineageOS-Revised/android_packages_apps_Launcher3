@@ -71,6 +71,8 @@ import static com.android.wm.shell.Flags.enableCreateAnyBubble;
 
 import static java.util.Objects.requireNonNull;
 
+import com.android.launcher3.LauncherPrefs;
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
@@ -1554,7 +1556,7 @@ public abstract class RecentsView<
      * button fully visible, center page is Clear All button.
      */
     public boolean isClearAllHidden() {
-        return mClearAllButton.getAlpha() != 1f;
+        return indexOfChild(mClearAllButton) == -1 || mClearAllButton.getAlpha() != 1f;
     }
 
     @Override
@@ -1939,7 +1941,9 @@ public abstract class RecentsView<
         // For loop end trace
         traceEnd(Trace.TRACE_TAG_APP);
 
-        addView(mClearAllButton);
+        if (!LauncherPrefs.get(getContext()).get(LauncherPrefs.RECENTS_CLEAR_ALL_AT_BOTTOM)) {
+            addView(mClearAllButton);
+        }
 
         traceBegin(Trace.TRACE_TAG_APP, "RecentsView.applyLoadPlan.layouts");
         updateTaskSize();
@@ -2388,7 +2392,11 @@ public abstract class RecentsView<
         mClearAllButton.onRecentsViewScroll(scroll, mOverviewGridEnabled);
 
         // Clear all button alpha was set by the previous line.
-        mActionsView.getIndexScrollAlpha().updateValue(1 - mClearAllButton.getScrollAlpha());
+        if (indexOfChild(mClearAllButton) != -1) {
+            mActionsView.getIndexScrollAlpha().updateValue(1 - mClearAllButton.getScrollAlpha());
+        } else {
+            mActionsView.getIndexScrollAlpha().updateValue(1f);
+        }
     }
 
     @Override
@@ -2837,7 +2845,8 @@ public abstract class RecentsView<
             }
             addView(taskView, mUtils.getRunningTaskExpectedIndex(taskView));
             runningTaskViewId = taskView.getTaskViewId();
-            if (wasEmpty) {
+            if (wasEmpty && !LauncherPrefs.get(getContext())
+                    .get(LauncherPrefs.RECENTS_CLEAR_ALL_AT_BOTTOM)) {
                 addView(mClearAllButton);
             }
 
@@ -3540,8 +3549,7 @@ public abstract class RecentsView<
         }
     }
 
-    @SuppressWarnings("unused")
-    private void dismissAllTasks(View view) {
+    public void dismissAllTasks(View view) {
         InteractionJankMonitorWrapper.begin(this, Cuj.CUJ_LAUNCHER_OVERVIEW_CLEAR_ALL);
         mDismissUtils.dismissAllTasks();
         mContainer.getStatsLogManager().logger().log(LAUNCHER_TASK_CLEAR_ALL);
@@ -5156,7 +5164,7 @@ public abstract class RecentsView<
 
     private int getLastViewIndex() {
         final View lastView;
-        if (!mDisallowScrollToClearAll) {
+        if (!mDisallowScrollToClearAll && indexOfChild(mClearAllButton) != -1) {
             // When ClearAllButton is present, it always end with ClearAllButton.
             lastView = mClearAllButton;
         } else if (mShowAsGridLastOnLayout) {
@@ -5179,7 +5187,8 @@ public abstract class RecentsView<
      * Returns page scroll of ClearAllButton.
      */
     public int getClearAllScroll() {
-        return getScrollForPage(indexOfChild(mClearAllButton));
+        int index = indexOfChild(mClearAllButton);
+        return index != -1 ? getScrollForPage(index) : 0;
     }
 
     @Override
@@ -5208,13 +5217,17 @@ public abstract class RecentsView<
             outPageScrolls[clearAllIndex] = clearAllScroll;
         }
 
-        int lastTaskScroll = getLastTaskScroll(clearAllScroll, clearAllWidth);
+        int lastTaskScroll = clearAllIndex != -1
+                ? getLastTaskScroll(clearAllScroll, clearAllWidth)
+                : (mIsRtl ? Integer.MIN_VALUE : Integer.MAX_VALUE);
         getTaskViews().forEachWithIndexInParent((index, taskView) -> {
             float scrollDiff = taskView.getScrollAdjustment(showAsGrid);
             int pageScroll = newPageScrolls[index] + Math.round(scrollDiff);
-            if ((mIsRtl && pageScroll < lastTaskScroll)
-                    || (!mIsRtl && pageScroll > lastTaskScroll)) {
-                pageScroll = lastTaskScroll;
+            if (clearAllIndex != -1) {
+                if ((mIsRtl && pageScroll < lastTaskScroll)
+                        || (!mIsRtl && pageScroll > lastTaskScroll)) {
+                    pageScroll = lastTaskScroll;
+                }
             }
             outPageScrolls[index] = pageScroll;
             debugLog(PAGE_SCROLL_TAG,
