@@ -91,6 +91,7 @@ public class SettingsActivity extends FragmentActivity
 
     private static final int DELAY_HIGHLIGHT_DURATION_MILLIS = 600;
     public static final String SAVE_HIGHLIGHTED_KEY = "android:preference_highlighted";
+    public static final String EXTRA_SHOW_FRAGMENT = ":settings:show_fragment";
 
     private static final String KEY_MINUS_ONE = "pref_enable_minus_one";
     private static final String SEARCH_PACKAGE = "com.google.android.googlequicksearchbox";
@@ -129,8 +130,11 @@ public class SettingsActivity extends FragmentActivity
             }
 
             final FragmentManager fm = getSupportFragmentManager();
-            final Fragment f = fm.getFragmentFactory().instantiate(getClassLoader(),
-                    getString(R.string.settings_fragment_name));
+            String fragmentName = intent.getStringExtra(EXTRA_SHOW_FRAGMENT);
+            if (fragmentName == null) {
+                fragmentName = getString(R.string.settings_fragment_name);
+            }
+            final Fragment f = fm.getFragmentFactory().instantiate(getClassLoader(), fragmentName);
             f.setArguments(args);
             // Display the fragment as the main content.
             fm.beginTransaction().replace(R.id.content_frame, f).commit();
@@ -150,6 +154,7 @@ public class SettingsActivity extends FragmentActivity
             ((DialogFragment) f).show(fm, key);
         } else {
             startActivity(new Intent(this, SettingsActivity.class)
+                    .putExtra(EXTRA_SHOW_FRAGMENT, fragment)
                     .putExtra(EXTRA_FRAGMENT_ARGS, args));
         }
         return true;
@@ -439,6 +444,17 @@ public class SettingsActivity extends FragmentActivity
             return position >= 0 ? new PreferenceHighlighter(
                     list, position, screen.findPreference(mHighLightKey))
                     : null;
+        }
+    }
+
+    /**
+     * This fragment shows the quickspace preferences.
+     */
+    public static class QuickSpaceSettingsFragment extends SettingsBasePreferenceFragment {
+        @Override
+        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+            getPreferenceManager().setSharedPreferencesName(LauncherFiles.SHARED_PREFERENCES_KEY);
+            setPreferencesFromResource(R.xml.launcher_quickspace_preferences, rootKey);
         }
     }
 }

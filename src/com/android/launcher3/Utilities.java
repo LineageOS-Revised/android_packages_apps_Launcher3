@@ -142,6 +142,14 @@ public final class Utilities {
 
     private static boolean sIsRunningInTestHarness = ActivityManager.isRunningInUserTestHarness();
 
+    public static boolean isGSAEnabled(Context context) {
+        try {
+            return context.getPackageManager().getApplicationInfo("com.google.android.googlequicksearchbox", 0).enabled;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static boolean isRunningInTestHarness() {
         return sIsRunningInTestHarness;
     }

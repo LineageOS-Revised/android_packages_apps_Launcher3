@@ -627,7 +627,14 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
             .thenOn(if (isBindingSync) MAIN_EXECUTOR else UI_HELPER_EXECUTOR, taskTracker) {
                 // If we are binding synchronously, inflate the first items on main thread,
                 // otherwise on background thread
-                firstBindItems.map { Pair.create(it, inflater.inflateItem(it, null)) }
+                firstBindItems.mapNotNull { item ->
+                    try {
+                        Pair.create(item, inflater.inflateItem(item, null))
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to inflate workspace item: $item", e)
+                        null
+                    }
+                }
             }
             .thenOn(MAIN_EXECUTOR, taskTracker) { inflatedItems ->
                 // Bind items
@@ -649,7 +656,14 @@ class ModelCallbacks(private var launcher: Launcher) : BgDataModel.Callbacks {
             }
             .thenOn(UI_HELPER_EXECUTOR, taskTracker) {
                 // Inflate remaining items on background thread
-                lastBindItems.map { Pair.create(it, inflater.inflateItem(it, null)) }
+                lastBindItems.mapNotNull { item ->
+                    try {
+                        Pair.create(item, inflater.inflateItem(item, null))
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to inflate workspace item: $item", e)
+                        null
+                    }
+                }
             }
             .thenOn(MAIN_EXECUTOR, taskTracker) { inflatedItems ->
                 // Bind items

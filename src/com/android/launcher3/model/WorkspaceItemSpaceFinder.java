@@ -17,11 +17,14 @@ package com.android.launcher3.model;
 
 import static com.android.launcher3.WorkspaceLayoutManager.FIRST_SCREEN_ID;
 
+import android.content.Context;
 import android.util.SparseArray;
 
 import com.android.launcher3.InvariantDeviceProfile;
 import com.android.launcher3.LauncherModel;
+import com.android.launcher3.LauncherPrefs;
 import com.android.launcher3.LauncherSettings;
+import com.android.launcher3.dagger.ApplicationContext;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.WorkspaceItemCoordinates;
 import com.android.launcher3.util.GridOccupancy;
@@ -40,10 +43,13 @@ public class WorkspaceItemSpaceFinder {
     private final BgDataModel mDataModel;
     private final InvariantDeviceProfile mIDP;
     private final LauncherModel mModel;
+    private final Context mContext;
 
     @Inject
     WorkspaceItemSpaceFinder(
+            @ApplicationContext Context context,
             BgDataModel dataModel, InvariantDeviceProfile idp, LauncherModel model) {
+        mContext = context;
         mDataModel = dataModel;
         mIDP = idp;
         mModel = model;
@@ -60,10 +66,11 @@ public class WorkspaceItemSpaceFinder {
      */
     public WorkspaceItemCoordinates findSpaceForItem(ArrayList<ItemInfo> addItemsFinal, int spanX,
             int spanY, IntSet excludedScreens) {
+        int startY = LauncherPrefs.SHOW_QUICKSPACE.get(mContext) ? 1 : 0;
         return findSpaceForItem(
                 addItemsFinal, spanX, spanY, excludedScreens,
                 /* startingFrom= */ new WorkspaceItemCoordinates(
-                        FIRST_SCREEN_ID, /* cellX= */ 0, /* cellY= */ 0));
+                        FIRST_SCREEN_ID, /* cellX= */ 0, /* cellY= */ startY));
     }
 
     /**

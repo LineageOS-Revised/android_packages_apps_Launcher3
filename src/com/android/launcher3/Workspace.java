@@ -287,6 +287,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     /** The underlying view that we are dragging something over. */
     private View mDragOverView = null;
     private FolderIcon mDragOverFolderIcon = null;
+    private View mFirstPagePinnedItem;
+    private boolean mIsEventOverFirstPagePinnedItem;
     private boolean mCreateUserFolderOnDrop = false;
     private boolean mAddToExistingFolderOnDrop = false;
 
@@ -726,13 +728,42 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
      */
     public void bindAndInitFirstWorkspaceScreen() {
         // Add the first page
-        insertNewWorkspaceScreen(Workspace.FIRST_SCREEN_ID, getChildCount());
+        CellLayout firstPage = insertNewWorkspaceScreen(Workspace.FIRST_SCREEN_ID, getChildCount());
+        if (!LauncherPrefs.SHOW_QUICKSPACE.get(getContext())) {
+            mFirstPagePinnedItem = null;
+            return;
+        }
+
+        if (mFirstPagePinnedItem == null) {
+            // In transposed layout, we add the first page pinned widget in the Grid.
+            // As workspace does not touch the edges, we do not need a full
+            // width first page pinned item.
+            mFirstPagePinnedItem = LayoutInflater.from(getContext())
+                    .inflate(R.layout.reserved_container_workspace, firstPage, false);
+        }
+
+        int cellHSpan = mLauncher.getDeviceProfile().inv.numSearchContainerColumns;
+        CellLayoutLayoutParams lp = new CellLayoutLayoutParams(0, 0, cellHSpan, 1);
+        lp.canReorder = false;
+        if (!firstPage.addViewToCellLayout(
+                mFirstPagePinnedItem, 0, R.id.reserved_container_workspace, lp, false)) {
+            Log.e(TAG, "Failed to add to item at (0, 0) to CellLayout");
+            mFirstPagePinnedItem = null;
+        }
     }
 
     public void removeAllWorkspaceScreens() {
         // Disable all layout transitions before removing all pages to ensure that we don't get the
         // transition animations competing with us changing the scroll when we add pages
         disableLayoutTransitions();
+
+        if (mFirstPagePinnedItem != null) {
+            ViewGroup parent = (ViewGroup) mFirstPagePinnedItem.getParent();
+            if (parent != null) {
+                parent.removeView(mFirstPagePinnedItem);
+            }
+            mFirstPagePinnedItem = null;
+        }
 
         // Remove the pages and clear the screen models
         removeAllViews();
@@ -1277,6 +1308,20 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     @Override
     protected void updateIsBeingDraggedOnTouchDown(MotionEvent ev) {
         super.updateIsBeingDraggedOnTouchDown(ev);
+
+        if (mFirstPagePinnedItem != null) {
+            final float[] tempFXY = new float[2];
+            tempFXY[0] = ev.getX();
+            tempFXY[1] = ev.getY();
+            Utilities.mapCoordInSelfToDescendant(mFirstPagePinnedItem, this, tempFXY);
+            mIsEventOverFirstPagePinnedItem = mFirstPagePinnedItem.getLeft() <= tempFXY[0]
+                    && mFirstPagePinnedItem.getRight() >= tempFXY[0]
+                    && mFirstPagePinnedItem.getTop() <= tempFXY[1]
+                    && mFirstPagePinnedItem.getBottom() >= tempFXY[1];
+        } else {
+            mIsEventOverFirstPagePinnedItem = false;
+        }
+
         float x = ev.getX();
         float y = ev.getY();
 
@@ -1310,7 +1355,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
 
     @Override
     protected void determineScrollingStart(MotionEvent ev) {
-        if (!isFinishedSwitchingState() || mIsDownOverHorizontalScrollContent) return;
+        if (!isFinishedSwitchingState() || mIsDownOverHorizontalScrollContent
+                || mIsEventOverFirstPagePinnedItem) return;
 
         float deltaX = ev.getX() - getDownMotionX();
         float absDeltaX = Math.abs(deltaX);
