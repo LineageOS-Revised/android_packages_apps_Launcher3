@@ -77,7 +77,8 @@
     <string name="trust_apps_help">Help</string>
     <string name="trust_apps_info_hidden">Hidden apps and their widgets are hidden from the drawer</string>
     <string name="trust_apps_info_protected">Protected apps require authentication to be opened from the launcher</string>
-    <!-- Recents clear all at bottom -->
+    <!-- Recents -->
     <string name="pref_recents_clear_all_at_bottom_title">Clear all at bottom</string>
     <string name="pref_recents_clear_all_at_bottom_summary">Show clear all button at bottom and hide screenshot button</string>
+    <string name="recents_meminfo_summary">Show available RAM in recent apps overview</string>
 </resources>

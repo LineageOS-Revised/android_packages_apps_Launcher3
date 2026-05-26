@@ -18,8 +18,10 @@ package com.android.quickstep.views;
 
 import android.app.ActivityManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Rect;
+import android.text.format.Formatter;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -148,6 +150,8 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
     private Button mSplitButton;
     private Button mClearAllButton;
     private Button mScreenshotButton;
+    private Button mRamUsageButton;
+    private MultiValueAlpha mRamUsageAlpha;
     /**
      * The "save app pair" button. Currently this is the only button that is not contained in
      * mActionButtons, since it is the sole button that appears for a grouped task.
@@ -193,18 +197,26 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
         mActionButtons = findViewById(R.id.action_buttons);
         mSaveAppPairButton = findViewById(R.id.action_save_app_pair);
         TypefaceUtils.setTypeface(mSaveAppPairButton, FontFamily.GSF_LABEL_LARGE);
+        mRamUsageButton = findViewById(R.id.action_ram_usage);
+        if (mRamUsageButton != null) {
+            mRamUsageAlpha = new MultiValueAlpha(mRamUsageButton, NUM_ALPHAS);
+            mRamUsageAlpha.setUpdateVisibility(true);
+        }
         // Initialize a list to hold alphas for mActionButtons and any group action buttons.
         mMultiValueAlphas[ACTIONS_ALPHAS] = new MultiValueAlpha(mActionButtons, NUM_ALPHAS);
         mMultiValueAlphas[GROUP_ACTIONS_ALPHAS] =
                 new MultiValueAlpha(mSaveAppPairButton, NUM_ALPHAS);
         Arrays.stream(mMultiValueAlphas).forEach(a -> a.setUpdateVisibility(true));
-        // To control alpha simultaneously on mActionButtons and any group action buttons, we set up
+        // To control alpha simultaneously on mActionButtons, group action buttons, and RAM usage, we set up
         // an AnimatedFloat for each alpha property.
         for (int i = 0; i < NUM_ALPHAS; i++) {
             final int index = i;
             mAlphaProperties[index] = new AnimatedFloat(() -> {
                 for (MultiValueAlpha multiValueAlpha : mMultiValueAlphas) {
                     multiValueAlpha.get(index).setValue(mAlphaProperties[index].value);
+                }
+                if (mRamUsageAlpha != null) {
+                    mRamUsageAlpha.get(index).setValue(mAlphaProperties[index].value);
                 }
             }, 1f /* initialValue */);
         }
@@ -216,6 +228,9 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
         mScreenshotButton.setOnClickListener(this);
         mClearAllButton = findViewById(R.id.action_clear_all);
         mClearAllButton.setOnClickListener(this);
+        if (mRamUsageButton != null) {
+            mRamUsageButton.setOnClickListener(this);
+        }
         mSplitButton = findViewById(R.id.action_split);
         mSplitButton.setOnClickListener(this);
         mSaveAppPairButton.setOnClickListener(this);
@@ -229,6 +244,59 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
                 .get(LauncherPrefs.RECENTS_CLEAR_ALL_AT_BOTTOM);
         mScreenshotButton.setVisibility(clearAllAtBottom ? GONE : VISIBLE);
         mClearAllButton.setVisibility(clearAllAtBottom ? VISIBLE : GONE);
+
+        if (mRamUsageButton != null) {
+            boolean showRamUsage = LauncherPrefs.get(getContext())
+                    .get(LauncherPrefs.RECENTS_MEMINFO);
+            mRamUsageButton.setVisibility(showRamUsage ? VISIBLE : GONE);
+            if (showRamUsage) {
+                updateRamUsageText();
+                updateRamUsagePosition();
+            }
+        }
+    }
+
+    private void updateRamUsageText() {
+        if (mRamUsageButton == null) return;
+        try {
+            Context context = getContext();
+            ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+            ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            if (activityManager != null) {
+                activityManager.getMemoryInfo(mi);
+                String availStr = Formatter.formatShortFileSize(context, mi.availMem);
+                String totalStr = getAdvertisedRam(mi.totalMem);
+                String text = availStr + " | " + totalStr;
+                mRamUsageButton.setText(text);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating RAM usage", e);
+        }
+    }
+
+    private String getAdvertisedRam(long totalBytes) {
+        double gb = (double) totalBytes / (1024.0 * 1024.0 * 1024.0);
+        if (gb <= 1.0) return "1 GB";
+        if (gb <= 2.0) return "2 GB";
+        if (gb <= 3.0) return "3 GB";
+        if (gb <= 4.0) return "4 GB";
+        if (gb <= 6.0) return "6 GB";
+        if (gb <= 8.0) return "8 GB";
+        if (gb <= 12.0) return "12 GB";
+        if (gb <= 16.0) return "16 GB";
+        if (gb <= 24.0) return "24 GB";
+        if (gb <= 32.0) return "32 GB";
+        if (gb <= 48.0) return "48 GB";
+        if (gb <= 64.0) return "64 GB";
+        return Math.round((double) totalBytes / 1000000000.0) + " GB";
+    }
+
+    @Override
+    protected void onVisibilityChanged(View changedView, int visibility) {
+        super.onVisibilityChanged(changedView, visibility);
+        if (visibility == VISIBLE) {
+            updateClearAllVisibility();
+        }
     }
 
     /**
@@ -242,10 +310,14 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
 
     @Override
     public void onClick(View view) {
+        int id = view.getId();
+        if (id == R.id.action_ram_usage) {
+            openRunningServices();
+            return;
+        }
         if (mCallbacks == null) {
             return;
         }
-        int id = view.getId();
         if (id == R.id.action_screenshot) {
             mCallbacks.onScreenshot();
         } else if (id == R.id.action_clear_all) {
@@ -254,6 +326,29 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
             mCallbacks.onSplit();
         } else if (id == R.id.action_save_app_pair) {
             mCallbacks.onSaveAppPair();
+        }
+    }
+
+    private void openRunningServices() {
+        try {
+            Intent intent = new Intent();
+            intent.setClassName("com.android.settings", "com.android.settings.Settings$RunningServicesActivity");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+        } catch (Exception e) {
+            try {
+                Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(intent);
+            } catch (Exception ex) {
+                try {
+                    Intent intent = new Intent(android.provider.Settings.ACTION_SETTINGS);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getContext().startActivity(intent);
+                } catch (Exception exc) {
+                    Log.e(TAG, "Failed to open settings", exc);
+                }
+            }
         }
     }
 
@@ -417,6 +512,22 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
     public void updateVerticalMargin(NavigationMode mode) {
         updateActionBarPosition(mActionButtons);
         updateActionBarPosition(mSaveAppPairButton);
+        if (mRamUsageButton != null) {
+            updateRamUsagePosition();
+        }
+    }
+
+    private void updateRamUsagePosition() {
+        if (mDp == null || mRamUsageButton == null) {
+            return;
+        }
+        LayoutParams actionParams = (LayoutParams) mRamUsageButton.getLayoutParams();
+        int gapPx = (int) (8 * getResources().getDisplayMetrics().density);
+        int ramHeightPx = (int) (28 * getResources().getDisplayMetrics().density);
+        int ramBottomMargin = getBottomMargin() - ramHeightPx - gapPx;
+        actionParams.setMargins(
+                actionParams.leftMargin, actionParams.topMargin,
+                actionParams.rightMargin, ramBottomMargin);
     }
 
     /** Positions actions buttons according to device settings and insets. */
