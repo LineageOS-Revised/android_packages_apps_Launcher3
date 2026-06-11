@@ -248,8 +248,17 @@ public class OverviewActionsView<T extends OverlayUICallbacks> extends FrameLayo
         if (mRamUsageButton != null) {
             boolean showRamUsage = LauncherPrefs.get(getContext())
                     .get(LauncherPrefs.RECENTS_MEMINFO);
-            mRamUsageButton.setVisibility(showRamUsage ? VISIBLE : GONE);
-            if (showRamUsage) {
+            if (mRamUsageAlpha != null) {
+                mRamUsageAlpha.setUpdateVisibility(showRamUsage);
+            }
+            if (!showRamUsage) {
+                mRamUsageButton.setVisibility(GONE);
+            } else {
+                if (mRamUsageButton.getAlpha() < 0.01f) {
+                    mRamUsageButton.setVisibility(INVISIBLE);
+                } else {
+                    mRamUsageButton.setVisibility(VISIBLE);
+                }
                 updateRamUsageText();
                 updateRamUsagePosition();
             }
