@@ -552,11 +552,9 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
                 || container == CONTAINER_ALL_APPS_PREDICTION)) {
             shortcuts.add(ADD_TO_HOME_SCREEN);
         }
+        shortcuts.add(UNINSTALL_APP);
         shortcuts.add(DONT_SUGGEST_APP);
         shortcuts.add(PRIVATE_PROFILE_INSTALL);
-        if (Flags.enablePrivateSpace()) {
-            shortcuts.add(UNINSTALL_APP);
-        }
         if (mBubbleFeatureConfig.areAppBubblesSupported()) {
             shortcuts.add(BUBBLE_SHORTCUT);
         }

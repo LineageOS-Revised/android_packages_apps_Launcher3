@@ -355,28 +355,17 @@ public class SystemShortcutTest {
 
 
     @Test
-    @DisableFlags(FLAG_ENABLE_PRIVATE_SPACE)
-    public void testUninstallGetShortcutWithPrivateSpaceOff() {
+    public void testUninstallGetShortcutWithNullItemInfo() {
         SystemShortcut systemShortcut = SystemShortcut.UNINSTALL_APP.getShortcut(
                 mTestContext, null, mView);
         Assert.assertNull(systemShortcut);
     }
 
     @Test
-    @EnableFlags(FLAG_ENABLE_PRIVATE_SPACE)
-    public void testUninstallGetShortcutWithNonPrivateItemInfo() {
-        mAppInfo = new AppInfo();
-        Assert.assertNull(SystemShortcut.UNINSTALL_APP.getShortcut(
-                mTestContext, mAppInfo, mView));
-    }
-
-    @Test
-    @EnableFlags(FLAG_ENABLE_PRIVATE_SPACE)
-    @MockUser(userType = UserType.MAIN)
-    @MockUser(userType = UserType.PRIVATE)
+    @MockUser(userType = UserIconInfo.TYPE_MAIN)
     public void testUninstallGetShortcutWithSystemItemInfo() {
         mAppInfo = new AppInfo();
-        mAppInfo.user = mMockUsers.findUser(UserIconInfo::isPrivate);
+        mAppInfo.user = mMockUsers.findUser(UserIconInfo::isMain);
         mAppInfo.itemType = ITEM_TYPE_APPLICATION;
         mAppInfo.intent = mIntent;
         mAppInfo.componentName = new ComponentName(mTestContext, getClass());
@@ -388,6 +377,28 @@ public class SystemShortcutTest {
                 mTestContext, mAppInfo, mView);
         verify(mLauncherActivityInfo, times(0)).getComponentName();
         Assert.assertNull(systemShortcut);
+    }
+
+    @Test
+    @MockUser(userType = UserIconInfo.TYPE_MAIN)
+    public void testUninstallGetShortcutWithNonSystemItemInfo() {
+        mAppInfo = new AppInfo();
+        mAppInfo.user = mMockUsers.findUser(UserIconInfo::isMain);
+        mAppInfo.itemType = ITEM_TYPE_APPLICATION;
+        mAppInfo.intent = mIntent;
+        mAppInfo.componentName = new ComponentName(mTestContext, getClass());
+        when(mLauncherActivityInfo.getComponentName()).thenReturn(mAppInfo.componentName);
+        // 3rd party app, not system app.
+        mApplicationInfo.flags = 0;
+
+        SystemShortcut systemShortcut = SystemShortcut.UNINSTALL_APP.getShortcut(
+                mTestContext, mAppInfo, mView);
+
+        verify(mLauncherActivityInfo).getComponentName();
+        Assert.assertNotNull(systemShortcut);
+
+        systemShortcut.onClick(mView);
+        verify(mSandboxContext).startActivity(any());
     }
 
     @Test
