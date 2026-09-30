@@ -161,11 +161,7 @@ public class SecondaryDropTarget extends ButtonDropTarget implements OnAlarmList
 
         Boolean uninstallDisabled = mUninstallDisabledCache.get(info.user);
         if (uninstallDisabled == null) {
-            UserManager userManager =
-                    (UserManager) getContext().getSystemService(Context.USER_SERVICE);
-            Bundle restrictions = userManager.getUserRestrictions(info.user);
-            uninstallDisabled = restrictions.getBoolean(UserManager.DISALLOW_APPS_CONTROL, false)
-                    || restrictions.getBoolean(UserManager.DISALLOW_UNINSTALL_APPS, false);
+            uninstallDisabled = isUninstallDisabled(getContext(), info.user);
             mUninstallDisabledCache.put(info.user, uninstallDisabled);
         }
         // Cancel any pending alarm and set cache expiry after some time
@@ -190,6 +186,13 @@ public class SecondaryDropTarget extends ButtonDropTarget implements OnAlarmList
             return INVALID;
         }
         return UNINSTALL;
+    }
+
+    public static boolean isUninstallDisabled(Context context, UserHandle user) {
+        Bundle restrictions =
+                context.getSystemService(UserManager.class).getUserRestrictions(user);
+        return restrictions.getBoolean(UserManager.DISALLOW_APPS_CONTROL, false)
+                || restrictions.getBoolean(UserManager.DISALLOW_UNINSTALL_APPS, false);
     }
 
     /**

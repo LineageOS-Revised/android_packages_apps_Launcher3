@@ -16,10 +16,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ShortcutInfo;
 import android.graphics.Rect;
-import android.os.Bundle;
 import android.os.Process;
 import android.os.UserHandle;
-import android.os.UserManager;
 import android.util.Log;
 import android.view.View;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -460,34 +458,23 @@ public abstract class SystemShortcut<T extends ActivityContext> extends ItemInfo
 
     public static final Factory<ActivityContext> UNINSTALL_APP =
             (activityContext, itemInfo, originalView) -> {
-                if (originalView == null || itemInfo == null) {
+                if (itemInfo == null || originalView == null) {
                     return null;
                 }
                 Context context = originalView.getContext();
-                if (itemInfo.user != null) {
-                    UserManager userManager = context.getSystemService(UserManager.class);
-                    if (userManager != null) {
-                        Bundle restrictions = userManager.getUserRestrictions(itemInfo.user);
-                        if (restrictions != null && (restrictions.getBoolean(UserManager.DISALLOW_APPS_CONTROL, false)
-                                || restrictions.getBoolean(UserManager.DISALLOW_UNINSTALL_APPS, false))) {
-                            return null;
-                        }
-                    }
-                }
-                ComponentName cn = SecondaryDropTarget.getUninstallTarget(context, itemInfo);
-                if (cn == null) {
-                    // If component name is null, don't show uninstall shortcut.
-                    // System apps will have component name as null.
+                if (SecondaryDropTarget.isUninstallDisabled(context, itemInfo.user)) {
                     return null;
                 }
-                return new UninstallApp<>(activityContext, itemInfo, originalView, cn);
+                ComponentName cn = SecondaryDropTarget.getUninstallTarget(context, itemInfo);
+                return cn == null ? null
+                        : new UninstallApp<>(activityContext, itemInfo, originalView, cn);
             };
 
-    public static class UninstallApp<T extends ActivityContext> extends SystemShortcut<T> {
+    private static class UninstallApp<T extends ActivityContext> extends SystemShortcut<T> {
         @NonNull
         private final ComponentName mComponentName;
 
-        public UninstallApp(T target, ItemInfo itemInfo, @NonNull View originalView,
+        UninstallApp(T target, ItemInfo itemInfo, @NonNull View originalView,
                 @NonNull ComponentName cn) {
             super(R.drawable.ic_uninstall_no_shadow,
                     R.string.uninstall_drop_target_label, target,
