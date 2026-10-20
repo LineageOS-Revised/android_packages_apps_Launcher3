@@ -25,9 +25,9 @@ import com.android.launcher3.LauncherAnimUtils.WORKSPACE_SCALE_PROPERTY_FACTORY
 import com.android.launcher3.apppairs.AppPairIcon
 import com.android.launcher3.folder.ClipRevealData.Factory.getClipRevealData
 import com.android.launcher3.folder.FolderAnimationData.Factory.getAnimationData
-import com.android.launcher3.folder.FolderGridOrganizer.createFolderGridOrganizer
 import com.android.launcher3.folder.IconAnimationData.Factory.getIconAnimationDataList
 import com.android.launcher3.graphics.ShapeDelegate
+import com.android.launcher3.model.data.ItemInfo
 
 /**
  * Manages the opening and closing animations for a [Folder].
@@ -85,9 +85,8 @@ class FolderAnimationSpringBuilderManager(
 
         /** Returns the list of "preview items" on {@param page}. */
         fun getPreviewIconsOnPage(folder: Folder, page: Int): List<View> {
-            return createFolderGridOrganizer(folder.mActivityContext.deviceProfile)
-                .setFolderInfo(folder.mInfo)
-                .previewItemsForPage(page, folder.iconsInReadingOrder)
+            val items = folder.folderIcon.getPreviewItemsOnPage(page)
+            return folder.iconsInReadingOrder.filter { (it.tag as? ItemInfo) in items }
         }
 
         /**

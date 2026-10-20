@@ -18,6 +18,8 @@ package com.android.launcher3.folder;
 
 import static com.android.launcher3.BubbleTextView.DISPLAY_FOLDER;
 import static com.android.launcher3.LauncherSettings.Favorites.DESKTOP_ICON_FLAG;
+import static com.android.launcher3.LauncherSettings.Favorites.FOLDER_STYLE_CIRCLE;
+import static com.android.launcher3.LauncherSettings.Favorites.FOLDER_STYLE_GRID;
 import static com.android.launcher3.Utilities.dpToPx;
 import static com.android.launcher3.folder.ClippedFolderIconLayoutRule.ENTER_INDEX;
 import static com.android.launcher3.folder.ClippedFolderIconLayoutRule.EXIT_INDEX;
@@ -34,6 +36,7 @@ import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.Rect;
@@ -58,6 +61,7 @@ import com.android.launcher3.model.data.AppPairInfo;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.ItemInfoWithIcon;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
+import com.android.launcher3.util.Themes;
 import com.android.launcher3.views.ActivityContext;
 
 import java.util.ArrayList;
@@ -96,6 +100,7 @@ public class PreviewItemManager {
     private int mTotalWidth = -1;
     private int mPrevTopPadding = -1;
     private Drawable mReferenceDrawable = null;
+    private final Paint mIndicatorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private int mNumOfPrevItems = 0;
 
@@ -124,6 +129,7 @@ public class PreviewItemManager {
         mIconSize = ActivityContext.lookupContext(
                 mContext).getDeviceProfile().getFolderProfile().getChildIconSizePx();
         mClipThreshold = dpToPx(1f);
+        mIndicatorPaint.setColor(Themes.getColorAccent(mContext));
     }
 
     /**
@@ -153,12 +159,63 @@ public class PreviewItemManager {
         if (mReferenceDrawable != null) {
             computePreviewDrawingParams(mReferenceDrawable.getIntrinsicWidth(),
                     mIcon.getMeasuredWidth());
+        } else if (mIcon.getMaxPreviewItems() == 0) {
+            computePreviewDrawingParams(mIconSize, mIcon.getMeasuredWidth());
         }
+    }
+
+    private boolean isIndicator(PreviewItemDrawingParams p) {
+        int style = mIcon.mInfo.folderStyle;
+        int max = mIcon.getMaxPreviewItems();
+        List<ItemInfo> items = mIcon.mInfo.getContents();
+        return (style == FOLDER_STYLE_GRID || style == FOLDER_STYLE_CIRCLE)
+                && items.size() > max && p.item == items.get(max - 1);
+    }
+
+    private void drawIndicatorDots(Canvas canvas, PreviewItemDrawingParams p, PointF offset) {
+        float size = mIntrinsicIconSize * p.scale;
+        float cx = offset.x + p.transX + size / 2f;
+        float cy = offset.y + p.transY + size / 2f;
+        for (int i = 0; i < 4; i++) {
+            canvas.drawCircle(cx + (i % 2 * 2 - 1) * size * 0.12f,
+                    cy + (i / 2 * 2 - 1) * size * 0.12f, size * 0.05f, mIndicatorPaint);
+        }
+    }
+
+    ItemInfo getItemAt(float x, float y) {
+        for (PreviewItemDrawingParams p : mFirstPageParams) {
+            float left = mIcon.mBackground.basePreviewOffsetX + p.transX;
+            float top = mIcon.mBackground.basePreviewOffsetY + p.transY;
+            float size = mIntrinsicIconSize * p.scale;
+            if (!p.hidden && !isIndicator(p) && x >= left && x < left + size
+                    && y >= top && y < top + size) {
+                return p.item;
+            }
+        }
+        return null;
+    }
+
+    PreviewItemDrawingParams findItem(Predicate<ItemInfo> match) {
+        for (PreviewItemDrawingParams p : mFirstPageParams) {
+            if (p.item != null && match.test(p.item) && !isIndicator(p)) return p;
+        }
+        return null;
+    }
+
+    boolean getItemBounds(ItemInfo item, Rect out) {
+        PreviewItemDrawingParams p = findItem(i -> i == item);
+        if (p == null) return false;
+        float left = mIcon.mBackground.basePreviewOffsetX + p.transX;
+        float top = mIcon.mBackground.basePreviewOffsetY + p.transY;
+        float size = mIntrinsicIconSize * p.scale;
+        out.set((int) left, (int) top, (int) (left + size), (int) (top + size));
+        return true;
     }
 
     private void computePreviewDrawingParams(int drawableSize, int totalSize) {
         if (mIntrinsicIconSize != drawableSize || mTotalWidth != totalSize ||
-                mPrevTopPadding != mIcon.getPaddingTop()) {
+                mPrevTopPadding != mIcon.getPaddingTop()
+                || mIcon.mPreviewLayoutRule.getIconSize() == 0) {
             mIntrinsicIconSize = drawableSize;
             mTotalWidth = totalSize;
             mPrevTopPadding = mIcon.getPaddingTop();
@@ -202,7 +259,11 @@ public class PreviewItemManager {
             if (!p.hidden) {
                 // Exiting param should always be clipped.
                 boolean isExiting = p.index == EXIT_INDEX;
-                drawPreviewItem(canvas, p, offset, isExiting | shouldClipPath, clipPath);
+                if (isIndicator(p)) {
+                    drawIndicatorDots(canvas, p, offset);
+                } else {
+                    drawPreviewItem(canvas, p, offset, isExiting | shouldClipPath, clipPath);
+                }
             }
         }
     }
@@ -267,7 +328,7 @@ public class PreviewItemManager {
         // If there are more params than visible in the preview, they are used for enter/exit
         // animation purposes and they were added to the front of the list.
         // To index the params properly, we need to skip these params.
-        index = index + Math.max(mFirstPageParams.size() - MAX_NUM_ITEMS_IN_PREVIEW, 0);
+        index = index + Math.max(mFirstPageParams.size() - mIcon.getMaxPreviewItems(), 0);
 
         PreviewItemDrawingParams params = index < mFirstPageParams.size() ?
                 mFirstPageParams.get(index) : null;

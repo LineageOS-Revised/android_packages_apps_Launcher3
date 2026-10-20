@@ -163,6 +163,7 @@ import com.android.launcher3.allapps.DiscoveryBounce;
 import com.android.launcher3.anim.AnimationSuccessListener;
 import com.android.launcher3.anim.PropertyListBuilder;
 import com.android.launcher3.apppairs.AppPairIcon;
+import com.android.launcher3.celllayout.CellLayoutLayoutParams;
 import com.android.launcher3.celllayout.CellPosMapper;
 import com.android.launcher3.celllayout.CellPosMapper.CellPos;
 import com.android.launcher3.celllayout.CellPosMapper.TwoPanelCellPosMapper;
@@ -1796,8 +1797,9 @@ public class Launcher extends StatefulActivity<LauncherState>
      * Creates and adds new folder to CellLayout
      */
     public FolderIcon addFolder(CellLayout layout, int container, final int screenId, int cellX,
-            int cellY) {
+            int cellY, int span) {
         final FolderInfo folderInfo = new FolderInfo();
+        folderInfo.spanX = folderInfo.spanY = span;
 
         // Update the model
         getModelWriter().addItemToDatabase(folderInfo, container, screenId, cellX, cellY);
@@ -1809,6 +1811,32 @@ public class Launcher extends StatefulActivity<LauncherState>
         CellLayout parent = mWorkspace.getParentCellLayoutForView(newFolder);
         parent.getShortcutsAndWidgets().measureChild(newFolder);
         return newFolder;
+    }
+
+    public void toggleItemSize(View v) {
+        ItemInfo info = (ItemInfo) v.getTag();
+        CellLayout layout = mWorkspace.getParentCellLayoutForView(v);
+        if (layout == null) return;
+        CellLayoutLayoutParams lp = (CellLayoutLayoutParams) v.getLayoutParams();
+        int span = info.spanX > 1 ? 1 : 2;
+        int i = 0;
+        if (span > 1) {
+            layout.markCellsAsUnoccupiedForView(v);
+            while (i < 4 && !layout.isRegionVacant(lp.getCellX() - i % 2, lp.getCellY() - i / 2,
+                    2, 2)) {
+                i++;
+            }
+            layout.markCellsAsOccupiedForView(v);
+            if (i == 4) {
+                Toast.makeText(this, R.string.out_of_space, Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        mWorkspace.removeWorkspaceItem(v);
+        getModelWriter().modifyItemInDatabase(info, info.container,
+                mWorkspace.getCellLayoutId(layout), lp.getCellX() - i % 2,
+                lp.getCellY() - i / 2, span, span);
+        mWorkspace.addInScreen(mItemInflater.inflateItem(info), info);
     }
 
     @Override
@@ -2269,9 +2297,14 @@ public class Launcher extends StatefulActivity<LauncherState>
                 op -> mapOverCellLayouts(containerArray, op);
 
         // Order: Preferred item by itself or in folder, then by matching package/user
-        return visibleContainer.getFirstMatch(
+        View v = visibleContainer.getFirstMatch(
                 preferredItem, forFolderMatch(preferredItem),
                 packageAndUserAndApp, forFolderMatch(packageAndUserAndApp));
+        if (v instanceof FolderIcon fi && fi.mInfo.isCustomized()
+                && !fi.setLaunchItem(preferredItem) && !fi.setLaunchItem(packageAndUserAndApp)) {
+            return null;
+        }
+        return v;
     }
 
     private ValueAnimator createNewAppBounceAnimation(View v, int i) {

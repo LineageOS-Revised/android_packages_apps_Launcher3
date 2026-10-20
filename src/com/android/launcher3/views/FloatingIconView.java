@@ -271,8 +271,8 @@ public class FloatingIconView extends FrameLayout implements
 
         if (v instanceof BubbleTextView) {
             ((BubbleTextView) v).getIconBounds(outViewBounds);
-        } else if (v instanceof FolderIcon) {
-            ((FolderIcon) v).getPreviewBounds(outViewBounds);
+        } else if (v instanceof FolderIcon fi && !fi.getLaunchItemBounds(outViewBounds)) {
+            fi.getPreviewBounds(outViewBounds);
         } else {
             outViewBounds.set(0, 0, v.getWidth(), v.getHeight());
         }
@@ -643,13 +643,15 @@ public class FloatingIconView extends FrameLayout implements
         view.mPositionOut = positionOut;
 
         // Get the drawable on the background thread
-        boolean shouldLoadIcon = originalView.getTag() instanceof ItemInfo && hideOriginal;
+        Object tag = originalView instanceof FolderIcon fi && fi.getLaunchItem() != null
+                ? fi.getLaunchItem() : originalView.getTag();
+        boolean shouldLoadIcon = tag instanceof ItemInfo && hideOriginal;
         if (shouldLoadIcon) {
-            if (sIconLoadResult != null && sIconLoadResult.itemInfo == originalView.getTag()) {
+            if (sIconLoadResult != null && sIconLoadResult.itemInfo == tag) {
                 view.mIconLoadResult = sIconLoadResult;
             } else {
-                view.mIconLoadResult = fetchIcon(launcher, originalView,
-                        (ItemInfo) originalView.getTag(), isOpening);
+                view.mIconLoadResult = fetchIcon(launcher, originalView, (ItemInfo) tag,
+                        isOpening);
             }
             view.setOriginalDrawableBackground(view.mIconLoadResult.btvDrawable);
         }

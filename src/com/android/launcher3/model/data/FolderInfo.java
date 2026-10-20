@@ -84,6 +84,14 @@ public class FolderInfo extends CollectionInfo {
 
     public int options;
 
+    public int folderStyle = LauncherSettings.Favorites.FOLDER_STYLE_QUADRANT;
+
+    public String coverText;
+
+    public boolean isCustomized() {
+        return spanX > 1 || folderStyle != LauncherSettings.Favorites.FOLDER_STYLE_QUADRANT;
+    }
+
     public FolderNameInfos suggestedFolderNames;
 
     /**
@@ -135,6 +143,8 @@ public class FolderInfo extends CollectionInfo {
     public void onAddToDatabase(@NonNull ContentWriter writer) {
         super.onAddToDatabase(writer);
         writer.put(LauncherSettings.Favorites.OPTIONS, options);
+        writer.put(LauncherSettings.Favorites.FOLDER_STYLE, folderStyle);
+        writer.put(LauncherSettings.Favorites.COVER_TEXT, coverText);
     }
 
     public boolean hasOption(int optionFlag) {
@@ -231,6 +241,8 @@ public class FolderInfo extends CollectionInfo {
         super.copyFrom(info);
         if (info instanceof FolderInfo fi) {
             contents.addAll(fi.getContents());
+            folderStyle = fi.folderStyle;
+            coverText = fi.coverText;
         }
     }
 

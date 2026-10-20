@@ -74,7 +74,9 @@ data class FolderAnimationData(
                     folderIconWorkspacePosition,
                 )
             val scaledFolderRadius: Int = previewBackground.scaledRadius
-            val baseIconSize: Float = getBubbleTextView(itemsInPreview[0]).iconSize.toFloat()
+            val baseIconSize: Float =
+                itemsInPreview.firstOrNull()?.let { getBubbleTextView(it).iconSize.toFloat() }
+                    ?: previewSize
             val initialFolderSize = (scaledFolderRadius * 2) * scaleRelativeToDragLayer
             val initialFolderScale = previewSize / baseIconSize * scaleRelativeToDragLayer
 

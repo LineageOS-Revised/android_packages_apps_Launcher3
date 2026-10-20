@@ -31,6 +31,7 @@ import com.android.launcher3.AbstractFloatingView;
 import com.android.launcher3.AbstractFloatingViewHelper;
 import com.android.launcher3.DropTargetHandler;
 import com.android.launcher3.Flags;
+import com.android.launcher3.Launcher;
 import com.android.launcher3.LauncherModel;
 import com.android.launcher3.LauncherSettings;
 import com.android.launcher3.R;
@@ -195,6 +196,25 @@ public abstract class SystemShortcut<T extends ActivityContext> extends ItemInfo
     }
 
     public static final Factory<ActivityContext> APP_INFO = AppInfo::new;
+
+    public static final Factory<Launcher> RESIZE = (launcher, itemInfo, originalView) ->
+            itemInfo.container == LauncherSettings.Favorites.CONTAINER_DESKTOP
+                    ? new Resize(launcher, itemInfo, originalView) : null;
+
+    public static class Resize extends SystemShortcut<Launcher> {
+
+        public Resize(Launcher target, ItemInfo itemInfo, View originalView) {
+            super(itemInfo.spanX > 1 ? R.drawable.ic_minimize : R.drawable.ic_enlarge,
+                    itemInfo.spanX > 1 ? R.string.action_minimize : R.string.action_enlarge,
+                    target, itemInfo, originalView);
+        }
+
+        @Override
+        public void onClick(View view) {
+            AbstractFloatingView.closeAllOpenViews(mTarget);
+            mTarget.toggleItemSize(mOriginalView);
+        }
+    }
 
     public static class AppInfo<T extends ActivityContext> extends SystemShortcut<T> {
 

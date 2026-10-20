@@ -27,7 +27,9 @@ import com.android.launcher3.AbstractFloatingViewHelper
 import com.android.launcher3.DropTargetHandler
 import com.android.launcher3.Flags.enableHomeScreenFilesCopyPaste
 import com.android.launcher3.Flags.enableHomeScreenFilesRenaming
+import com.android.launcher3.Launcher
 import com.android.launcher3.LauncherConstants
+import com.android.launcher3.LauncherSettings.Favorites.CONTAINER_DESKTOP
 import com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET
 import com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_APP_GROUP
 import com.android.launcher3.LauncherSettings.Favorites.ITEM_TYPE_CUSTOM_APPWIDGET
@@ -39,10 +41,13 @@ import com.android.launcher3.SecondaryDropTarget
 import com.android.launcher3.Utilities
 import com.android.launcher3.accessibility.LauncherAccessibilityDelegate
 import com.android.launcher3.allapps.PrivateProfileManager
+import com.android.launcher3.folder.FolderIcon
+import com.android.launcher3.folder.FolderStylePickerSheet
 import com.android.launcher3.homescreenfiles.HomeScreenFilesRenameDialogFactory
 import com.android.launcher3.homescreenfiles.HomeScreenFilesUtils
 import com.android.launcher3.homescreenfiles.homeScreenFile
 import com.android.launcher3.logging.StatsLogManager.LauncherEvent
+import com.android.launcher3.model.data.FolderInfo
 import com.android.launcher3.model.data.ItemInfo
 import com.android.launcher3.model.data.LauncherAppWidgetInfo
 import com.android.launcher3.model.data.WorkspaceItemInfo
@@ -76,8 +81,41 @@ object PopupDataSource {
 
 object FolderSystemShortcuts : PopupDataMapper {
 
+    private val customizePopupData =
+        PopupData(
+            R.drawable.ic_customize,
+            R.string.action_customize_folder,
+            PopupCategory.SYSTEM_SHORTCUT_FIXED,
+        ) { activityContext, itemInfo, view ->
+            AbstractFloatingView.closeAllOpenViews(activityContext)
+            FolderStylePickerSheet.show(
+                activityContext as Launcher,
+                view as FolderIcon,
+                itemInfo as FolderInfo,
+            )
+        }
+
     override fun getPopupDataByItemInfo(itemInfo: ItemInfo): List<PopupData>? =
-        if (itemInfo.itemType == ITEM_TYPE_FOLDER) listOf(PopupDataSource.removePopupData) else null
+        if (itemInfo.itemType != ITEM_TYPE_FOLDER) null
+        else
+            buildList {
+                add(PopupDataSource.removePopupData)
+                add(customizePopupData)
+                if (itemInfo.container == CONTAINER_DESKTOP) {
+                    add(
+                        PopupData(
+                            if (itemInfo.spanX > 1) R.drawable.ic_minimize
+                            else R.drawable.ic_enlarge,
+                            if (itemInfo.spanX > 1) R.string.action_minimize
+                            else R.string.action_enlarge,
+                            PopupCategory.SYSTEM_SHORTCUT_FIXED,
+                        ) { activityContext, _, view ->
+                            AbstractFloatingView.closeAllOpenViews(activityContext)
+                            (activityContext as Launcher).toggleItemSize(view)
+                        }
+                    )
+                }
+            }
 }
 
 object AppPairSystemShortcuts : PopupDataMapper {

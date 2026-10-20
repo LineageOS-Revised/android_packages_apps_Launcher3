@@ -36,7 +36,14 @@ constructor() {
 
     open fun drawFolderBlur(canvas: Canvas, pathWrapper: PathWrapper?, view: View) {}
 
-    open fun drawIconBlur(canvas: Canvas, key: Any, left: Int, top: Int, radius: Int) {}
+    open fun drawIconBlur(
+        canvas: Canvas,
+        key: Any,
+        left: Int,
+        top: Int,
+        radius: Int,
+        cornerRadius: Float,
+    ) {}
 
     open fun folderCloseComplete() {}
 

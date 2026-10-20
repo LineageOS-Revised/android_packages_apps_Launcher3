@@ -138,6 +138,12 @@ public class ItemClickHandler {
      * @param v The view that was clicked. Must be an instance of {@link FolderIcon}.
      */
     private static void onClickFolderIcon(View v) {
+        if (((FolderIcon) v).getTouchedPreviewItem() instanceof WorkspaceItemInfo item) {
+            onClickAppShortcut(((FolderIcon) v).setLaunchItem(i -> i == item) ? v : null, item,
+                    Launcher.getLauncher(v.getContext()));
+            return;
+        }
+        ((FolderIcon) v).setLaunchItem(i -> false);
         Folder folder = ((FolderIcon) v).getFolder();
         if (!folder.isOpen() && !folder.isDestroyed()) {
             // Open the requested folder

@@ -2244,8 +2244,9 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             target.removeView(v);
             mStatsLogManager.logger().withItemInfo(destInfo).withInstanceId(d.logInstanceId)
                     .log(LauncherEvent.LAUNCHER_ITEM_DROP_FOLDER_CREATED);
-            FolderIcon fi = mLauncher.addFolder(target, container, screenId, targetCell[0],
-                    targetCell[1]);
+            CellLayoutLayoutParams lp = (CellLayoutLayoutParams) v.getLayoutParams();
+            FolderIcon fi = mLauncher.addFolder(target, container, screenId, lp.getCellX(),
+                    lp.getCellY(), destInfo.spanX);
             destInfo.cellX = -1;
             destInfo.cellY = -1;
             sourceInfo.cellX = -1;
@@ -2834,6 +2835,14 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             // We want the point to be mapped to the dragTarget.
             mapPointFromDropLayout(mDragTargetLayout, mDragViewVisualCenter);
 
+            if (mLauncher.isHotseatLayout(mDragTargetLayout)
+                    && (item instanceof WorkspaceItemInfo || item instanceof FolderInfo)) {
+                item.spanX = item.spanY = 1;
+                if (mDragInfo != null) {
+                    mDragInfo.spanX = mDragInfo.spanY = 1;
+                }
+            }
+
             int minSpanX = item.spanX;
             int minSpanY = item.spanY;
             if (item.minSpanX > 0 && item.minSpanY > 0) {
@@ -3054,7 +3063,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                 api.getIconDrawableArea().onTemporaryContainerChange(DISPLAY_FOLDER);
             }
 
-            mFolderCreateBg.animateToAccept(mDragTargetLayout, mTargetCell[0], mTargetCell[1]);
+            CellLayoutLayoutParams lp = (CellLayoutLayoutParams) mDragOverView.getLayoutParams();
+            mFolderCreateBg.animateToAccept(mDragTargetLayout, lp.getCellX(), lp.getCellY());
             mDragTargetLayout.clearDragOutlines();
             setDragMode(DRAG_MODE_CREATE_FOLDER);
 

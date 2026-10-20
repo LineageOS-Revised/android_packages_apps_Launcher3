@@ -283,6 +283,18 @@ java_import {
     ],
 }
 
+android_library_import {
+    name: "lib-emoji2-emojipicker",
+    aars: ["libs/emoji2-emojipicker-1.6.0.aar"],
+    sdk_version: "current",
+    static_libs: [
+        "androidx.emoji2_emoji2",
+        "androidx.emoji2_emoji2-views-helper",
+        "androidx.recyclerview_recyclerview",
+        "androidx.core_core",
+    ],
+}
+
 // Library with all the dependencies for building Launcher3
 android_library {
     name: "Launcher3ResLib",
@@ -328,6 +340,7 @@ android_library {
         "widget_picker_component",
         "workspace-functions",
         "org.lineageos.platform",
+        "lib-emoji2-emojipicker",
         // Compose dependencies
         "androidx.compose.runtime_runtime",
         "androidx.compose.material3_material3",
@@ -371,6 +384,7 @@ android_app {
         "Launcher3ResLib",
         // Compose dep
         "androidx.compose.runtime_runtime",
+        "lib-emoji2-emojipicker",
     ],
     srcs: [
         ":launcher-src",
@@ -492,6 +506,7 @@ android_library {
         "androidx.room_room-runtime",
         // Compose dep
         "androidx.compose.runtime_runtime",
+        "lib-emoji2-emojipicker",
     ],
     plugins: [
         "androidx.room_room-compiler-plugin",
@@ -535,6 +550,7 @@ android_library {
         "QuickstepResLib",
         // Compose dep
         "androidx.compose.runtime_runtime",
+        "lib-emoji2-emojipicker",
     ],
     manifest: "quickstep/AndroidManifest.xml",
     platform_apis: true,

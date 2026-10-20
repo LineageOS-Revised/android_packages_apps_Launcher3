@@ -21,11 +21,11 @@ public class ClippedFolderIconLayoutRule {
 
     private float[] mTmpPoint = new float[2];
 
-    private float mAvailableSpace;
-    private float mRadius;
-    private float mIconSize;
-    private boolean mIsRtl;
-    private float mBaselineIconScale;
+    protected float mAvailableSpace;
+    protected float mRadius;
+    protected float mIconSize;
+    protected boolean mIsRtl;
+    protected float mBaselineIconScale;
     private int mNumFolderColumns;
 
     /**

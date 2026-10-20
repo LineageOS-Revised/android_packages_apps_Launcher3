@@ -46,6 +46,7 @@ import androidx.annotation.VisibleForTesting;
 import com.android.launcher3.CellLayout;
 import com.android.launcher3.DeviceProfile;
 import com.android.launcher3.Flags;
+import com.android.launcher3.LauncherSettings;
 import com.android.launcher3.R;
 import com.android.launcher3.celllayout.DelegatedCellDrawing;
 import com.android.launcher3.graphics.PathWrapper;
@@ -97,6 +98,7 @@ public class PreviewBackground extends DelegatedCellDrawing {
     public boolean isClipping = true;
 
     private BlurBackgroundHelper mBlurHelper;
+    private static final ShapeDelegate GRID_SHAPE = new ShapeDelegate.RoundedSquare(0.3f);
 
     // Drawing / animation configurations
     @VisibleForTesting protected static final float ACCEPT_SCALE_FACTOR = 1.20f;
@@ -178,10 +180,13 @@ public class PreviewBackground extends DelegatedCellDrawing {
 
         mBlurHelper = activity.getActivityComponent().getBlurBackgroundHelper();
         DeviceProfile grid = activity.getDeviceProfile();
-        previewSize = grid.getFolderProfile().getFolderIconSizePx();
+        boolean enlarged = invalidateDelegate instanceof FolderIcon fi && fi.mInfo.spanX > 1;
+        previewSize = enlarged ? (int) (availableSpaceX * 0.85f)
+                : grid.getFolderProfile().getFolderIconSizePx();
 
         basePreviewOffsetX = (availableSpaceX - previewSize) / 2;
-        basePreviewOffsetY = topPadding + grid.getFolderProfile().getFolderIconOffsetYPx();
+        basePreviewOffsetY = topPadding
+                + (enlarged ? 0 : grid.getFolderProfile().getFolderIconOffsetYPx());
 
         // Stroke width is 1dp
         mStrokeWidth = context.getResources().getDisplayMetrics().density;
@@ -255,14 +260,21 @@ public class PreviewBackground extends DelegatedCellDrawing {
         mPaint.setColor(getBgColor());
 
         if (mBlurHelper != null) {
+            int r = getScaledRadius();
             mBlurHelper.drawIconBlur(canvas, mInvalidateDelegate != null ? mInvalidateDelegate : this,
-                    getOffsetX(), getOffsetY(), getScaledRadius());
+                    getOffsetX(), getOffsetY(), r,
+                    getShape() instanceof ShapeDelegate.RoundedSquare rs
+                            ? rs.getRadiusRatio() * r : r);
         }
         getShape().drawShape(canvas, getOffsetX(), getOffsetY(), getScaledRadius(), mPaint);
         drawShadow(canvas);
     }
 
-    private ShapeDelegate getShape() {
+    ShapeDelegate getShape() {
+        if (mInvalidateDelegate instanceof FolderIcon fi
+                && fi.mInfo.folderStyle == LauncherSettings.Favorites.FOLDER_STYLE_GRID) {
+            return GRID_SHAPE;
+        }
         return ThemeManager.INSTANCE.get(mContext).getFolderShape();
     }
 

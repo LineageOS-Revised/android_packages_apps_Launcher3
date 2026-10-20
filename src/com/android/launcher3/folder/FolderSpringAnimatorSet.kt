@@ -38,7 +38,6 @@ import com.android.launcher3.R
 import com.android.launcher3.Utilities.isDarkTheme
 import com.android.launcher3.anim.SpringAnimationBuilder
 import com.android.launcher3.apppairs.AppPairIcon
-import com.android.launcher3.folder.ClippedFolderIconLayoutRule.MAX_NUM_ITEMS_IN_PREVIEW
 import com.android.launcher3.util.MultiPropertyFactory
 import com.android.launcher3.util.MultiPropertyFactory.*
 import com.android.launcher3.util.Themes
@@ -278,7 +277,7 @@ class FolderSpringAnimatorSet(val animatorSet: AnimatorSet) {
 
                 val footerAlphaDuration: Int
                 var footerStartDelay = 0
-                val isLargeFolder = folder.itemCount > MAX_NUM_ITEMS_IN_PREVIEW
+                val isLargeFolder = folder.itemCount > folder.folderIcon.maxPreviewItems
                 if (isLargeFolder) {
                     if (isOpening) {
                         folder.mFooter.alpha = 0f

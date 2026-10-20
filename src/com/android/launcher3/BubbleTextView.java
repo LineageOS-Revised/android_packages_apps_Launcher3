@@ -42,6 +42,7 @@ import static com.android.launcher3.model.data.ItemInfoWithIcon.FLAG_AUTOMATED;
 import static com.android.launcher3.model.data.ItemInfoWithIcon.FLAG_INCREMENTAL_DOWNLOAD_ACTIVE;
 import static com.android.launcher3.model.data.ItemInfoWithIcon.FLAG_INSTALL_SESSION_ACTIVE;
 import static com.android.launcher3.model.data.ItemInfoWithIcon.FLAG_SHOW_DOWNLOAD_PROGRESS_MASK;
+import static com.android.launcher3.util.Executors.MODEL_EXECUTOR;
 import static com.android.launcher3.util.MultiTranslateDelegate.INDEX_TASKBAR_APP_RUNNING_STATE_ANIM;
 
 import android.animation.Animator;
@@ -49,6 +50,8 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.LauncherActivityInfo;
+import android.content.pm.LauncherApps;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -94,6 +97,7 @@ import com.android.launcher3.folder.FolderIcon;
 import com.android.launcher3.graphics.AutomatedIconDelegate;
 import com.android.launcher3.graphics.PreloadIconDelegate;
 import com.android.launcher3.graphics.ThemeManager;
+import com.android.launcher3.icons.BaseIconFactory;
 import com.android.launcher3.icons.BitmapInfo.DrawableCreationFlags;
 import com.android.launcher3.icons.DotRenderer;
 import com.android.launcher3.icons.DotRenderer.IconShapeInfo;
@@ -194,7 +198,8 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
 
     private boolean mLayoutHorizontal;
     private final boolean mIsRtl;
-    private final int mIconSize;
+    private int mIconSize;
+    private final int mDefaultIconSize;
 
     @ViewDebug.ExportedProperty(category = "launcher")
     private boolean mHideBadge = false;
@@ -390,6 +395,7 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
 
         mIconSize = a.getDimensionPixelSize(R.styleable.BubbleTextView_iconSizeOverride,
                 defaultIconSize);
+        mDefaultIconSize = mIconSize;
         a.recycle();
 
         mRunningAppIndicatorHeight =
@@ -1109,7 +1115,18 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int height = MeasureSpec.getSize(heightMeasureSpec);
-        if (mCenterVertically) {
+        int iconSize = getTag() instanceof ItemInfo info && info.spanX > 1
+                && info.container == LauncherSettings.Favorites.CONTAINER_DESKTOP
+                ? Math.min(MeasureSpec.getSize(widthMeasureSpec), height) : mDefaultIconSize;
+        if (iconSize != mIconSize) {
+            mIconSize = iconSize;
+            setIcon(mIcon);
+        }
+        if (mIconSize != mDefaultIconSize) {
+            setContainerTextVisibility(false);
+            setPadding(getPaddingLeft(), (height - mIconSize) / 2, getPaddingRight(),
+                    getPaddingBottom());
+        } else if (mCenterVertically) {
             Paint.FontMetrics fm = getPaint().getFontMetrics();
             int cellHeightPx = mIconSize + getCompoundDrawablePadding() +
                     (int) Math.ceil(fm.bottom - fm.top) * getCellSpecMaxTextLineCount();
@@ -1435,7 +1452,40 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
         if (mIcon != null) {
             mIcon.setVisible(getWindowVisibility() == VISIBLE && isShown(), false);
             mIcon.setHoverScaleEnabledForDisplay(mDisplay != DISPLAY_TASKBAR);
+            if (mIconSize != mDefaultIconSize && mIcon.getIntrinsicWidth() < mIconSize
+                    && getTag() instanceof WorkspaceItemInfo info
+                    && info.itemType == LauncherSettings.Favorites.ITEM_TYPE_APPLICATION) {
+                loadEnlargedIcon(info, mIconSize);
+            }
         }
+    }
+
+    private void loadEnlargedIcon(WorkspaceItemInfo info, int size) {
+        Context context = getContext();
+        MODEL_EXECUTOR.execute(() -> {
+            try {
+                LauncherActivityInfo lai = context.getSystemService(LauncherApps.class)
+                        .resolveActivity(info.getIntent(), info.user);
+                InvariantDeviceProfile idp = mDeviceProfile.inv;
+                int dpi = idp.fillResIconDpi * size / idp.iconBitmapSize;
+                WorkspaceItemInfo copy = new WorkspaceItemInfo(info);
+                try (BaseIconFactory factory = new BaseIconFactory(context, dpi, size,
+                        Flags.enableLauncherIconShapes(),
+                        ThemeManager.INSTANCE.get(context).getThemeController())) {
+                    copy.bitmap = factory.createBadgedIconBitmap(
+                            LauncherAppState.getInstance(context).getIconProvider()
+                                    .getIcon(lai.getActivityInfo(), dpi),
+                            new BaseIconFactory.IconOptions().setUser(info.user));
+                }
+                post(() -> {
+                    if (getTag() == info && mIconSize == size) {
+                        setIcon(copy.newIcon(context, getIconCreationFlagsForInfo(info)));
+                    }
+                });
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to load enlarged icon", e);
+            }
+        });
     }
 
     @Override

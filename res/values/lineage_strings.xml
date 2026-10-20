@@ -83,6 +83,14 @@
     <string name="recents_meminfo_summary">Show available RAM in recent apps overview</string>
     <string name="folder_blur_title">Folder blur</string>
     <string name="folder_blur_summary">Blur the background behind open folders</string>
+    <string name="action_enlarge">Enlarge</string>
+    <string name="action_minimize">Minimize</string>
+    <string name="action_customize_folder">Customize</string>
+    <string name="folder_style_picker_title">Folder style</string>
+    <string name="folder_style_quadrant">Quadrant</string>
+    <string name="folder_style_grid">Grid</string>
+    <string name="folder_style_circle">Circle</string>
+    <string name="folder_style_cover">Cover</string>
 
     <!-- Transition animation -->
     <string name="pref_transition_animation_scale_title">App transition animation speed</string>

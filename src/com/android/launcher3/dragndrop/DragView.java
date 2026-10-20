@@ -57,12 +57,14 @@ import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
 
 import com.android.app.animation.Interpolators;
+import com.android.launcher3.LauncherSettings;
 import com.android.launcher3.R;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.folder.ClippedFolderIconLayoutRule;
 import com.android.launcher3.graphics.ThemeManager;
 import com.android.launcher3.icons.FastBitmapDrawable;
 import com.android.launcher3.icons.IconNormalizer;
+import com.android.launcher3.model.data.FolderInfo;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.util.RunnableList;
 import com.android.launcher3.util.ViewEx;
@@ -266,7 +268,8 @@ public class DragView extends FrameLayout {
     @TargetApi(Build.VERSION_CODES.O)
     public void setItemInfo(final ItemInfo info) {
         mItemType = info.itemType;
-        if (!mAllowSpringDrawable) {
+        if (!mAllowSpringDrawable || (info instanceof FolderInfo fi
+                && fi.folderStyle != LauncherSettings.Favorites.FOLDER_STYLE_QUADRANT)) {
             return;
         }
 

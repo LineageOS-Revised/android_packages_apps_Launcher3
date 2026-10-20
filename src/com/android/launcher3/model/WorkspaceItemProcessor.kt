@@ -397,8 +397,10 @@ class WorkspaceItemProcessor(
             c.applyCommonProperties(info)
             info.intent = intent
             info.rank = c.rank
-            info.spanX = 1
-            info.spanY = 1
+            info.spanX =
+                if (c.container == Favorites.CONTAINER_DESKTOP && c.spanX == 2 && c.spanY == 2) 2
+                else 1
+            info.spanY = info.spanX
             info.runtimeStatusFlags = info.runtimeStatusFlags or disabledState
             if (isSafeMode && !appInfoWrapper.isSystem()) {
                 info.runtimeStatusFlags =
@@ -491,10 +493,18 @@ class WorkspaceItemProcessor(
         c.applyCommonProperties(collection)
         // Do not trim the folder label, as is was set by the user.
         collection.title = c.title
-        collection.spanX = 1
-        collection.spanY = 1
+        collection.spanX =
+            if (c.container == Favorites.CONTAINER_DESKTOP && c.spanX == 2 && c.spanY == 2) 2
+            else 1
+        collection.spanY = collection.spanX
         if (collection is FolderInfo) {
             collection.options = c.options
+            c.getColumnIndex(Favorites.FOLDER_STYLE).let {
+                if (it >= 0) collection.folderStyle = c.getInt(it)
+            }
+            c.getColumnIndex(Favorites.COVER_TEXT).let {
+                if (it >= 0) collection.coverText = c.getString(it)
+            }
         } else {
             // An app pair may be inside another folder, so it needs to preserve rank information.
             collection.rank = c.rank

@@ -97,7 +97,6 @@ import com.android.launcher3.dragndrop.DragController.DragListener;
 import com.android.launcher3.dragndrop.DragOptions;
 import com.android.launcher3.graphics.PathWrapper;
 import com.android.launcher3.graphics.ShapeDelegate;
-import com.android.launcher3.graphics.ThemeManager;
 import com.android.launcher3.logger.LauncherAtom.FromState;
 import com.android.launcher3.logger.LauncherAtom.ToState;
 import com.android.launcher3.logging.StatsLogManager;
@@ -893,8 +892,7 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         boolean shouldUseSpringMotion = Flags.enableLauncherIconShapes()
                 && Flags.enableExpressiveFolderExpansion();
         if (shouldUseSpringMotion) {
-            ShapeDelegate shapeDelegate =
-                    ThemeManager.INSTANCE.get(mActivityContext.asContext()).getFolderShape();
+            ShapeDelegate shapeDelegate = mFolderIcon.mBackground.getShape();
             return new FolderAnimationSpringBuilderManager(
                     this, shapeDelegate, mLauncherDelegate
             );
@@ -1608,6 +1606,7 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
 
         rank = Utilities.boundToRange(rank, 0, mInfo.getContents().size());
         mInfo.getContents().add(rank, item);
+        item.spanX = item.spanY = 1;
 
         if (!mSuppressContentUpdate) {
             FolderGridOrganizer verifier = createFolderGridOrganizer(

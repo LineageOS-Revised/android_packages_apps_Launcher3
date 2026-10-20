@@ -106,7 +106,14 @@ constructor(
         drawWorkspaceBlur(canvas, pathWrapper?.path, view)
     }
 
-    override fun drawIconBlur(canvas: Canvas, key: Any, left: Int, top: Int, radius: Int) {
+    override fun drawIconBlur(
+        canvas: Canvas,
+        key: Any,
+        left: Int,
+        top: Int,
+        radius: Int,
+        cornerRadius: Float,
+    ) {
         if (!isBlurEnabled() || !canvas.isHardwareAccelerated || folderOpen) return
         if (alphaListener == null) {
             alphaListener = ViewTreeObserver.OnPreDrawListener { updateIconAlphas(); true }
@@ -119,7 +126,7 @@ constructor(
             (key as? View)?.postInvalidateOnAnimation()
         }
         d.setBlurRadius(folderBlurRadius.toInt())
-        d.setCornerRadius(radius.toFloat())
+        d.setCornerRadius(cornerRadius)
         d.setBounds(left, top, left + 2 * radius, top + 2 * radius)
         d.alpha = blurAlpha(key)
         d.draw(canvas)

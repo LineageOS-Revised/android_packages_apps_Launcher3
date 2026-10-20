@@ -71,7 +71,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements
      * Represents the schema of the database. Changes in scheme need not be backwards compatible.
      * When increasing the scheme version, ensure that downgrade_schema.json is updated
      */
-    public static final int SCHEMA_VERSION = Flags.enableLauncherIconShapes() ? 34 : 32;
+    public static final int SCHEMA_VERSION = 35;
     private static final String TAG = "DatabaseHelper";
     private static final boolean LOGD = false;
 
@@ -268,6 +268,16 @@ public class DatabaseHelper extends SQLiteOpenHelper implements
             }
             // Fall through
             case 34: {
+                addIntegerColumn(db, Favorites.FOLDER_STYLE, 0);
+                try (SQLiteTransaction t = new SQLiteTransaction(db)) {
+                    db.execSQL("ALTER TABLE favorites ADD COLUMN " + Favorites.COVER_TEXT
+                            + " TEXT;");
+                    t.commit();
+                } catch (SQLException ex) {
+                    Log.e(TAG, ex.getMessage(), ex);
+                }
+            }
+            case 35: {
                 // DB Upgraded successfully
                 return;
             }
