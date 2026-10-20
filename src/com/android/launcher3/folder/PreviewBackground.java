@@ -50,6 +50,7 @@ import com.android.launcher3.R;
 import com.android.launcher3.celllayout.DelegatedCellDrawing;
 import com.android.launcher3.graphics.PathWrapper;
 import com.android.launcher3.graphics.ShapeDelegate;
+import com.android.launcher3.util.BlurBackgroundHelper;
 import com.android.launcher3.graphics.ThemeManager;
 import com.android.launcher3.views.ActivityContext;
 
@@ -94,6 +95,8 @@ public class PreviewBackground extends DelegatedCellDrawing {
     // When the PreviewBackground is drawn under an icon (for creating a folder) the border
     // should not occlude the icon
     public boolean isClipping = true;
+
+    private BlurBackgroundHelper mBlurHelper;
 
     // Drawing / animation configurations
     @VisibleForTesting protected static final float ACCEPT_SCALE_FACTOR = 1.20f;
@@ -173,6 +176,7 @@ public class PreviewBackground extends DelegatedCellDrawing {
         mBgColor = ta.getColor(R.styleable.FolderIconPreview_folderPreviewColor, 0);
         ta.recycle();
 
+        mBlurHelper = activity.getActivityComponent().getBlurBackgroundHelper();
         DeviceProfile grid = activity.getDeviceProfile();
         previewSize = grid.getFolderProfile().getFolderIconSizePx();
 
@@ -250,6 +254,10 @@ public class PreviewBackground extends DelegatedCellDrawing {
         mPaint.setStyle(Paint.Style.FILL);
         mPaint.setColor(getBgColor());
 
+        if (mBlurHelper != null) {
+            mBlurHelper.drawIconBlur(canvas, mInvalidateDelegate != null ? mInvalidateDelegate : this,
+                    getOffsetX(), getOffsetY(), getScaledRadius());
+        }
         getShape().drawShape(canvas, getOffsetX(), getOffsetY(), getScaledRadius(), mPaint);
         drawShadow(canvas);
     }

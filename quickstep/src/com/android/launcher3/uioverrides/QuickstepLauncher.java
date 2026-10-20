@@ -23,7 +23,6 @@ import static android.view.accessibility.AccessibilityEvent.TYPE_VIEW_FOCUSED;
 
 import static com.android.app.animation.Interpolators.EMPHASIZED;
 import static com.android.internal.jank.Cuj.CUJ_LAUNCHER_LAUNCH_APP_PAIR_FROM_WORKSPACE;
-import static com.android.launcher3.Flags.blurOnMoreSurfaces;
 import static com.android.launcher3.Flags.enableUnfoldStateAnimation;
 import static com.android.launcher3.LauncherConstants.SavedInstanceKeys.PENDING_SPLIT_SELECT_INFO;
 import static com.android.launcher3.LauncherConstants.SavedInstanceKeys.RUNTIME_STATE;
@@ -126,6 +125,8 @@ import com.android.launcher3.Flags;
 import com.android.launcher3.GestureNavContract;
 import com.android.launcher3.InvariantDeviceProfile;
 import com.android.launcher3.Launcher;
+import com.android.launcher3.LauncherPrefChangeListener;
+import com.android.launcher3.LauncherPrefs;
 import com.android.launcher3.LauncherSettings.Favorites;
 import com.android.launcher3.LauncherState;
 import com.android.launcher3.QuickstepAccessibilityDelegate;
@@ -321,7 +322,15 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
         mDepthController = new LauncherDepthController(this, blurState);
         getTheme().applyStyle(blurEnabled ? R.style.OverviewBlurStyle
                 : R.style.OverviewBlurFallbackStyle, true);
-        if (blurOnMoreSurfaces()) {
+        LauncherPrefChangeListener folderBlurListener = k -> {
+            if (LauncherPrefs.FOLDER_BLUR.getSharedPrefKey().equals(k)) {
+                mWallpaperThemeManager.recreateToUpdateTheme();
+            }
+        };
+        LauncherPrefs.get(this).addListener(folderBlurListener, LauncherPrefs.FOLDER_BLUR);
+        closeOnDestroy(() -> LauncherPrefs.get(this).removeListener(
+                folderBlurListener, LauncherPrefs.FOLDER_BLUR));
+        if (LauncherPrefs.get(this).get(LauncherPrefs.FOLDER_BLUR)) {
             getTheme().applyStyle(blurEnabled ? R.style.FolderBlurStyle
                     : R.style.FolderBlurFallbackStyle, true);
         }

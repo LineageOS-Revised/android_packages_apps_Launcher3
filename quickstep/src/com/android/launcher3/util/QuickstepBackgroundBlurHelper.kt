@@ -24,14 +24,17 @@ import android.graphics.RenderEffect
 import android.graphics.RenderNode
 import android.graphics.Shader
 import android.view.View
+import android.view.ViewTreeObserver
 import com.android.internal.graphics.drawable.BackgroundBlurDrawable
-import com.android.launcher3.Flags.blurOnMoreSurfaces
+import com.android.launcher3.Launcher
+import com.android.launcher3.LauncherPrefs
 import com.android.launcher3.R
 import com.android.launcher3.dagger.ActivityContextSingleton
 import com.android.launcher3.folder.Folder
 import com.android.launcher3.graphics.PathWrapper
 import com.android.launcher3.util.WindowBlurState.WINDOW_BLUR_STATE
 import com.android.launcher3.views.ActivityContext
+import java.util.WeakHashMap
 import javax.inject.Inject
 import javax.inject.Named
 
@@ -55,6 +58,11 @@ constructor(
     private val workspaceBlurRenderNode = RenderNode("workspaceBlur")
     private val workspaceBlurRenderNodeOutline = Outline()
     private val bounds = Rect()
+    private val iconBlurs = WeakHashMap<Any, BackgroundBlurDrawable>()
+    private var folderOpen = false
+    private var alphaListener: ViewTreeObserver.OnPreDrawListener? = null
+    private val blurPref =
+        LauncherPrefs.get(activityContext.asContext()).get(LauncherPrefs.FOLDER_BLUR)
     private val folderBlurDrawable: BackgroundBlurDrawable? by lazy {
         if (!isBlurEnabled()) null
         else
@@ -76,6 +84,7 @@ constructor(
 
         folderIcon.setTextVisible(false)
         folderIcon.setIconVisible(false)
+        setFolderOpen(true)
 
         val dragLayer = activityContext.dragLayer
         val canvas =
@@ -95,6 +104,25 @@ constructor(
 
         drawCrossWindowBlur(canvas, pathWrapper, view)
         drawWorkspaceBlur(canvas, pathWrapper?.path, view)
+    }
+
+    override fun drawIconBlur(canvas: Canvas, key: Any, left: Int, top: Int, radius: Int) {
+        if (!isBlurEnabled() || !canvas.isHardwareAccelerated || folderOpen) return
+        if (alphaListener == null) {
+            alphaListener = ViewTreeObserver.OnPreDrawListener { updateIconAlphas(); true }
+                .also { activityContext.dragLayer.viewTreeObserver.addOnPreDrawListener(it) }
+        }
+        val d = iconBlurs.getOrPut(key) {
+            activityContext.dragLayer.getViewRootImpl()?.createBackgroundBlurDrawable() ?: return
+        }
+        if (d.setVisible(true, false) || d.bounds.isEmpty) {
+            (key as? View)?.postInvalidateOnAnimation()
+        }
+        d.setBlurRadius(folderBlurRadius.toInt())
+        d.setCornerRadius(radius.toFloat())
+        d.setBounds(left, top, left + 2 * radius, top + 2 * radius)
+        d.alpha = blurAlpha(key)
+        d.draw(canvas)
     }
 
     private fun drawWorkspaceBlur(canvas: Canvas, path: Path?, view: View) {
@@ -149,9 +177,33 @@ constructor(
             workspaceBlurRenderNode.discardDisplayList()
         }
         folderBlurDrawable?.setVisible(false, false)
+        setFolderOpen(false)
+    }
+
+    private fun setFolderOpen(open: Boolean) {
+        if (folderOpen == open) return
+        folderOpen = open
+        iconBlurs.keys.forEach { (it as? View)?.invalidate() }
+    }
+
+    private fun updateIconAlphas() {
+        if (folderOpen) return
+        iconBlurs.forEach { (k, d) ->
+            val a = blurAlpha(k)
+            if (d.alpha == 0 && a > 0) (k as? View)?.invalidate()
+            d.alpha = a
+        }
+    }
+
+    private fun blurAlpha(key: Any): Int {
+        val v = key as? View ?: return 255
+        if (!v.isShown) return 0
+        val p = (activityContext as? Launcher)?.allAppsController?.progress?.coerceIn(0f, 1f) ?: 1f
+        return (generateSequence(v) { it.parent as? View }.fold(p) { a, x -> a * x.alpha } * 255)
+            .toInt()
     }
 
     override fun isBlurEnabled(): Boolean {
-        return blurOnMoreSurfaces() && blurState.value
+        return blurPref && blurState.value
     }
 }

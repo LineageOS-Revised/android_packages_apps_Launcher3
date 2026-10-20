@@ -187,6 +187,7 @@
 
     <style name="FolderBlurStyle">
         <item name="folderBackgroundColor">@color/customColorSurfaceEffect0</item>
+        <item name="folderPreviewColor">@color/customColorSurfaceEffect0</item>
     </style>
     <style name="FolderBlurFallbackStyle">
         <item name="folderBackgroundColor">@color/customColorSurfaceEffect0Fallback</item>
