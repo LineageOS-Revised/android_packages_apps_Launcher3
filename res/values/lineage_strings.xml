@@ -81,6 +81,8 @@
     <string name="pref_recents_clear_all_at_bottom_title">Clear all at bottom</string>
     <string name="pref_recents_clear_all_at_bottom_summary">Show clear all button at bottom and hide screenshot button</string>
     <string name="recents_meminfo_summary">Show available RAM in recent apps overview</string>
+    <string name="icon_pack_title">Icon pack</string>
+    <string name="icon_pack_default">System default</string>
     <string name="folder_blur_title">Folder blur</string>
     <string name="folder_blur_summary">Blur the background behind open folders</string>
     <string name="action_enlarge">Enlarge</string>

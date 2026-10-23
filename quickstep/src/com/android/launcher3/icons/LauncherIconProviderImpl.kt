@@ -18,12 +18,17 @@ package com.android.launcher3.icons
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.ComponentInfo
 import android.content.pm.PackageItemInfo
 import android.content.res.Resources.NotFoundException
+import android.graphics.Color
 import android.graphics.drawable.AdaptiveIconDrawable
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.InsetDrawable
 import android.util.Log
 import com.android.launcher3.LauncherModel
+import com.android.launcher3.LauncherPrefs
 import com.android.launcher3.dagger.ApplicationContext
 import com.android.launcher3.dagger.LauncherAppSingleton
 import com.android.launcher3.graphics.ShapeDelegate.Circle
@@ -70,6 +75,23 @@ constructor(
         )
 
     override fun loadPackageIcon(
+        info: PackageItemInfo,
+        appInfo: ApplicationInfo,
+        density: Int,
+    ): Drawable? {
+        val icon = loadAppIcon(info, appInfo, density)
+        val p = IconPack.get(mContext, LauncherPrefs.get(mContext).get(LauncherPrefs.ICON_PACK))
+            ?.getIcon(info.packageName, (info as? ComponentInfo)?.name, density) ?: return icon
+        val a = p as? AdaptiveIconDrawable
+        val f = AdaptiveIconDrawable.getExtraInsetFraction()
+        return AdaptiveIconDrawable(
+            a?.background ?: ColorDrawable(Color.TRANSPARENT),
+            a?.foreground ?: InsetDrawable(p, f / (1 + 2 * f)),
+            a?.monochrome ?: (icon as? AdaptiveIconDrawable)?.monochrome,
+        )
+    }
+
+    private fun loadAppIcon(
         info: PackageItemInfo,
         appInfo: ApplicationInfo,
         density: Int,

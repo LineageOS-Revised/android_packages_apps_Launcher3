@@ -101,12 +101,14 @@ constructor(
         lifecycle.addCloseable(overlayChangeHandler.addCallback { verifyIconState() })
 
         val prefListener = LauncherPrefChangeListener {
-            if (it == PREF_ICON_SHAPE.sharedPrefKey) verifyIconState()
+            if (it == PREF_ICON_SHAPE.sharedPrefKey || it == LauncherPrefs.ICON_PACK.sharedPrefKey) {
+                verifyIconState()
+            }
         }
-        prefs.addListener(prefListener, PREF_ICON_SHAPE)
+        prefs.addListener(prefListener, PREF_ICON_SHAPE, LauncherPrefs.ICON_PACK)
         lifecycle.addCloseable(themePreference.forEach(mainExecutor) { verifyIconState() })
         lifecycle.addCloseable {
-            prefs.removeListener(prefListener, PREF_ICON_SHAPE)
+            prefs.removeListener(prefListener, PREF_ICON_SHAPE, LauncherPrefs.ICON_PACK)
             iconState.closeController()
         }
     }
@@ -182,7 +184,7 @@ constructor(
                 }
 
         val themeKey = themePreference.value
-        val themeCode = themeKey?.toString() ?: "no-theme"
+        val themeCode = (themeKey?.toString() ?: "no-theme") + prefs.get(LauncherPrefs.ICON_PACK)
 
         val iconControllerFactory =
             if (oldState?.themeCode == themeCode) {
