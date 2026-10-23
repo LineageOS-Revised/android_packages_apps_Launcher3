@@ -26,4 +26,7 @@
     <!-- QuickSpace -->
     <dimen name="quickspace_title_size">20sp</dimen>
     <dimen name="quickspace_subtitle_size">16sp</dimen>
+
+    <!-- Use fixed landscape mode by default -->
+    <bool name="config_defaultFixedLandscape">false</bool>
 </resources>
